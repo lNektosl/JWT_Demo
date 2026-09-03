@@ -8,41 +8,33 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<string[]>([]);
   const [input, setInput] = useState<string>("");
 
+  const token =
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhOTcyNjUwOC0wY2Q1LTQ1MmItOThlYi02ODBlNDcyNjk3YTIiLCJyb2xlcyI6WyJST0xFX0dVRVNUIl0sImlhdCI6MTc3NzM4NDU2MCwiZXhwIjoxNzc3Mzg4MTYwfQ.TlqUzkagPquUm_fwZYC4_W_g8vNuIjRfeP-Q4rk323Y";
   useEffect(() => {
+    const socket = new SockJS("http://localhost:8080/ws");
 
-      let stompClient :Client|null = null
- const conect = async () => {
-     const res = await fetch("http://localhost:8080/api/auth/guest", {
-         method: 'POST'
-     })
-     const token = await res.text();
+    const stompClient = new Client({
+      webSocketFactory: () => socket,
+      connectHeaders: {
+        Authorization: `Bearer ${token}`,
+      },
+      onConnect: () => {
+        console.log("Connected");
 
-     console.log(token)
-     const socket = new SockJS("http://localhost:8080/ws");
+        stompClient.subscribe("/topic/messages", (msg: IMessage) => {
+          setMessages((prev) => [...prev, msg.body]);
+        });
+      },
+      onStompError: (frame) => {
+        console.error("STOMP Error:", frame);
+      },
+    });
 
-     stompClient = new Client({
-         webSocketFactory: () => socket,
-         connectHeaders: {
-             Authorization: `Bearer ${token}`,
-         },
-         onConnect: () => {
-             console.log("Connected");
-
-             stompClient?.subscribe("/topic/messages", (msg: IMessage) => {
-                 setMessages((prev) => [...prev, msg.body]);
-             });
-         },
-         onStompError: (frame) => {
-             console.error("STOMP Error:", frame);
-         },
-     });
-
-     stompClient.activate();
-     setClient(stompClient);};
-    conect()
+    stompClient.activate();
+    setClient(stompClient);
 
     return () => {
-      stompClient?.deactivate();
+      stompClient.deactivate();
     };
   }, []);
 
